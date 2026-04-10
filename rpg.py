@@ -2,6 +2,9 @@ import random
 import os
 import time
 import json
+import select
+import sys
+import threading
 
 # ─────────────────────────────────────────
 #  CONFIG
@@ -63,6 +66,30 @@ def bar(current, maximum, width=20, fill="█", empty="░"):
     filled = int(width * current / max(maximum, 1))
     return f"[{fill*filled}{empty*(width-filled)}] {current}/{maximum}"
 
+def timed_input(prompt, seconds):
+    result    = [None]
+    stop_flag = threading.Event()
+
+    def countdown():
+        for remaining in range(seconds, 0, -1):
+            if stop_flag.is_set():
+                return
+            print(f"\r{prompt}  [{remaining:2d}s] ", end="", flush=True)
+            time.sleep(1)
+        if not stop_flag.is_set():
+            print(f"\r{prompt}  [ 0s] ")
+
+    t = threading.Thread(target=countdown, daemon=True)
+    t.start()
+    ready, _, _ = select.select([sys.stdin], [], [], seconds)
+    stop_flag.set()
+    if ready:
+        val = sys.stdin.readline().strip()
+        print()
+        return val
+    print(f"\n  ⏱  Time's up! You hesitate.")
+    return None
+
 # ─────────────────────────────────────────
 #  ENTITY / PLAYER
 # ─────────────────────────────────────────
@@ -122,10 +149,54 @@ class Player(Entity):
 # ─────────────────────────────────────────
 #  COMBAT
 # ─────────────────────────────────────────
+def enemy_pick_action(ai_weights):
+    actions = list(ai_weights.keys())
+    weights = list(ai_weights.values())
+    return random.choices(actions, weights)[0]
+
+def resolve_combat(player, enemy, p_action, e_action):
+    """Resolve one turn. Returns False if combat should end early (flee)."""
+    p_def = player.defense * 2 if p_action == "defend" else player.defense
+    e_def = enemy.defense  * 2 if e_action == "defend" else enemy.defense
+
+    slow_print(f"  {enemy.name} prepares to {e_action.upper()}!")
+
+    # ── player attacks enemy ──
+    if p_action in ("attack", "heavy"):
+        hit_threshold = 12 if p_action == "heavy" else 10
+        if roll() + player.atk > hit_threshold:
+            player.combo += 1
+            atk_mult = 2 if p_action == "heavy" else 1
+            dmg = max(1, player.atk * atk_mult + (player.combo - 1) - e_def)
+            enemy.hp -= dmg
+            label = "Heavy blow" if p_action == "heavy" else "You strike"
+            slow_print(f"  {label}! {dmg} damage to {enemy.name}. (Combo x{player.combo})")
+        else:
+            player.combo = 0
+            slow_print("  Your attack misses. Combo reset.")
+    elif p_action == "defend":
+        player.combo = 0
+        slow_print("  You brace for impact.")
+
+    # ── enemy attacks player ──
+    if e_action in ("attack", "heavy"):
+        hit_threshold = 12 if e_action == "heavy" else 10
+        if roll() + enemy.atk > hit_threshold:
+            atk_mult = 2 if e_action == "heavy" else 1
+            dmg = max(1, enemy.atk * atk_mult - p_def)
+            player.hp -= dmg
+            label = f"{enemy.name} strikes heavily" if e_action == "heavy" else f"{enemy.name} attacks"
+            slow_print(f"  {label} for {dmg} damage!")
+        else:
+            slow_print(f"  {enemy.name} misses!")
+    elif e_action == "defend":
+        slow_print(f"  {enemy.name} braces for impact.")
+
 def combat(player, enemy_template, floor, scale_override=None, room_num=0):
-    tier_scale = ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
-    scale      = scale_override if scale_override is not None else max(1, 1 + (floor - 1) * 0.15 - tier_scale)
-    enemy      = Entity(
+    tier_scale  = ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
+    scale       = scale_override if scale_override is not None else max(1, 1 + (floor - 1) * 0.15 - tier_scale)
+    ai_weights  = enemy_template["ai"]
+    enemy       = Entity(
         name    = enemy_template["name"],
         hp      = int(enemy_template["hp"]      * scale),
         atk     = int(enemy_template["atk"]     * scale),
@@ -150,40 +221,32 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
         print()
         print("  [1] Attack    [2] Heavy Strike (2x dmg, 60% hit)")
         print("  [3] Defend    [4] Flee (50% chance)")
-        choice = input("  > ").strip()
+        timer_cfg = CFG["game"]["turn_timer"]
+        if timer_cfg["enabled"]:
+            choice = timed_input("  > ", timer_cfg["seconds"])
+        else:
+            choice = input("  > ").strip()
 
-        if choice == "1":
-            hit = roll() + player.atk > 10
-            if hit:
-                player.combo += 1
-                dmg = max(1, player.atk + (player.combo - 1) - enemy.defense // 2)
-                enemy.hp -= dmg
-                slow_print(f"  You strike! {dmg} damage. (Combo x{player.combo})")
-            else:
-                player.combo = 0
-                slow_print("  Your attack misses. Combo reset.")
-
-        elif choice == "2":
-            if roll() <= 12:
-                player.combo += 1
-                dmg = max(1, player.atk * 2 + (player.combo - 1) - enemy.defense // 2)
-                enemy.hp -= dmg
-                slow_print(f"  Heavy blow! {dmg} damage. (Combo x{player.combo})")
-            else:
-                player.combo = 0
-                slow_print("  You overswing and miss. Combo reset.")
-
-        elif choice == "3":
-            player.combo = 0
-            slow_print("  You brace for impact. Defense doubled this turn. Combo reset.")
-            guard = player.defense * 2
-            dmg   = max(1, enemy.atk - guard)
-            player.hp -= dmg
-            slow_print(f"  {enemy.name} hits for {dmg} (blocked most of it).")
+        if choice not in ("1", "2", "3", "4"):
+            slow_print("  Invalid input — you hesitate.")
+            e_action = enemy_pick_action(ai_weights)
+            slow_print(f"  {enemy.name} prepares to {e_action.upper()}!")
+            if e_action in ("attack", "heavy"):
+                hit_threshold = 12 if e_action == "heavy" else 10
+                if roll() + enemy.atk > hit_threshold:
+                    atk_mult = 2 if e_action == "heavy" else 1
+                    dmg = max(1, enemy.atk * atk_mult - player.defense)
+                    player.hp -= dmg
+                    slow_print(f"  {enemy.name} strikes you for {dmg} while you stand frozen!")
+                else:
+                    slow_print(f"  {enemy.name} misses despite your hesitation!")
+            elif e_action == "defend":
+                slow_print(f"  {enemy.name} braces, waiting for you to act.")
             pause()
             continue
 
-        elif choice == "4":
+        # flee resolves immediately, no simultaneous action
+        if choice == "4":
             if roll() > 10:
                 slow_print("  You flee! But not before taking a parting blow...")
                 dmg = max(1, enemy.atk - player.defense)
@@ -197,16 +260,13 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
                 dmg = max(1, enemy.atk - player.defense + 3)
                 player.hp -= dmg
                 slow_print(f"  {enemy.name} punishes you for {dmg} damage.")
-        else:
-            slow_print("  Invalid input — you hesitate.")
+                pause()
+                continue
 
-        if enemy.hp > 0:
-            if roll() + enemy.atk > 10:
-                dmg = max(1, enemy.atk - player.defense)
-                player.hp -= dmg
-                slow_print(f"  {enemy.name} retaliates for {dmg} damage.")
-            else:
-                slow_print(f"  {enemy.name} swings and misses!")
+        p_action = {"1": "attack", "2": "heavy", "3": "defend"}[choice]
+        e_action = enemy_pick_action(ai_weights)
+
+        resolve_combat(player, enemy, p_action, e_action)
 
         if player.hp <= 4 and player.is_alive():
             slow_print("  ⚠  You're barely standing...")

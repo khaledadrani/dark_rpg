@@ -2,21 +2,22 @@
   "game": {
     "floor_count": 10,
     "rooms_per_floor": 5,
-    "key_drop_chance": 0.3
+    "key_drop_chance": 0.3,
+    "turn_timer": {"enabled": true, "seconds": 60}
   },
   "player": {
     "hp": 25,
     "atk": 3,
-    "defense": 0,
-    "gold": 0,
+    "defense": 1,
+    "gold": 5,
     "food": 10
   },
   "enemies": [
-    {"name": "Goblin",      "hp": 12, "atk": 3,  "defense": 0, "xp": 10,  "gold": [2, 6]},
-    {"name": "Skeleton",    "hp": 18, "atk": 5,  "defense": 0, "xp": 18,  "gold": [4, 10]},
-    {"name": "Orc",         "hp": 28, "atk": 7,  "defense": 2, "xp": 30,  "gold": [8, 16]},
-    {"name": "Dark Knight", "hp": 45, "atk": 11, "defense": 5, "xp": 55,  "gold": [14, 25]},
-    {"name": "Dragon",      "hp": 80, "atk": 16, "defense": 8, "xp": 100, "gold": [30, 60]}
+    {"name": "Goblin",      "hp": 12, "atk": 3,  "defense": 1, "xp": 10,  "gold": [2, 6],   "ai": {"attack": 60, "heavy": 30, "defend": 10}},
+    {"name": "Skeleton",    "hp": 18, "atk": 5,  "defense": 1, "xp": 18,  "gold": [4, 10],  "ai": {"attack": 50, "heavy": 20, "defend": 30}},
+    {"name": "Orc",         "hp": 28, "atk": 7,  "defense": 2, "xp": 30,  "gold": [8, 16],  "ai": {"attack": 45, "heavy": 40, "defend": 15}},
+    {"name": "Dark Knight", "hp": 45, "atk": 11, "defense": 5, "xp": 55,  "gold": [14, 25], "ai": {"attack": 35, "heavy": 30, "defend": 35}},
+    {"name": "Dragon",      "hp": 80, "atk": 16, "defense": 8, "xp": 100, "gold": [30, 60], "ai": {"attack": 40, "heavy": 50, "defend": 10}}
   ],
   "boss": {
     "name": "The Dungeon Tyrant",
@@ -24,7 +25,8 @@
     "atk": 18,
     "defense": 10,
     "xp": 200,
-    "gold": [50, 100]
+    "gold": [50, 100],
+    "ai": {"attack": 30, "heavy": 40, "defend": 30}
   },
   "loot_table": [
     {"name": "Old Sword",       "stat": "atk",     "bonus": 2},
@@ -53,7 +55,7 @@
   },
   "shop": [
     {"label": "Potion",  "cost": 10, "stat": "hp",   "bonus": 20, "desc": "restore 20 HP"},
-    {"label": "Rations", "cost": 5, "stat": "food",  "bonus": 4,  "desc": "+4 food"},
+    {"label": "Rations", "cost": 5,  "stat": "food",  "bonus": 4,  "desc": "+4 food"},
     {"label": "Sharpen", "cost": 20, "stat": "atk",   "bonus": 3,  "desc": "ATK +3"}
   ]
 }
