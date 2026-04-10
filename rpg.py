@@ -23,6 +23,24 @@ BOSS            = CFG["boss"]
 LOOT_TABLE      = CFG["loot_table"]
 ROOM_FLAVORS    = CFG["room_flavors"]
 
+SAVE_FILE = "save.json"
+
+def save_game(player):
+    data = {k: v for k, v in player.__dict__.items()}
+    with open(SAVE_FILE, "w") as f:
+        json.dump(data, f)
+
+def load_game():
+    with open(SAVE_FILE) as f:
+        data = json.load(f)
+    player = Player(data["name"])
+    player.__dict__.update(data)
+    return player
+
+def delete_save():
+    if os.path.exists(SAVE_FILE):
+        os.remove(SAVE_FILE)
+
 # ─────────────────────────────────────────
 #  UTILITIES
 # ─────────────────────────────────────────
@@ -46,23 +64,32 @@ def bar(current, maximum, width=20, fill="█", empty="░"):
     return f"[{fill*filled}{empty*(width-filled)}] {current}/{maximum}"
 
 # ─────────────────────────────────────────
-#  PLAYER
+#  ENTITY / PLAYER
 # ─────────────────────────────────────────
-class Player:
+class Entity:
+    def __init__(self, name, hp, atk, defense):
+        self.name    = name
+        self.hp      = hp
+        self.max_hp  = hp
+        self.atk     = atk
+        self.defense = defense
+
+    def is_alive(self):
+        return self.hp > 0
+
+
+class Player(Entity):
     def __init__(self, name):
         p = CFG["player"]
-        self.name   = name
-        self.hp     = p["hp"]
-        self.max_hp = p["hp"]
-        self.atk    = p["atk"]
-        self.defense= p["defense"]
-        self.xp     = 0
-        self.level  = 1
-        self.gold   = p["gold"]
-        self.food   = p["food"]
-        self.combo  = 0          # momentum system
-        self.scars  = 0          # scar system: each "death" reduces max_hp
-        self.floor  = 1
+        super().__init__(name, p["hp"], p["atk"], p["defense"])
+        self.xp      = 0
+        self.level   = 1
+        self.gold    = p["gold"]
+        self.food    = p["food"]
+        self.combo   = 0
+        self.scars   = 0
+        self.floor   = 1
+        self.has_key = False
 
     def xp_to_next(self):
         return self.level * 40
@@ -85,9 +112,6 @@ class Player:
         if self.scars:
             print(f"  Scars: {'⚔ '*self.scars}  (max HP reduced by {self.scars*5})")
 
-    def is_alive(self):
-        return self.hp > 0
-
     def eat(self):
         if self.food <= 0:
             slow_print("  You have no food left. Hunger gnaws at you (-2 HP).")
@@ -98,28 +122,29 @@ class Player:
 # ─────────────────────────────────────────
 #  COMBAT
 # ─────────────────────────────────────────
-def combat(player, enemy_template, floor, scale_override=None):
+def combat(player, enemy_template, floor, scale_override=None, room_num=0):
     tier_scale = ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
     scale      = scale_override if scale_override is not None else max(1, 1 + (floor - 1) * 0.15 - tier_scale)
-    enemy      = {
-        "name": enemy_template["name"],
-        "hp":   int(enemy_template["hp"]  * scale),
-        "atk":  int(enemy_template["atk"] * scale),
-        "xp":   enemy_template["xp"],
-        "gold": enemy_template["gold"],
-    }
-    max_ehp = enemy["hp"]
+    enemy      = Entity(
+        name    = enemy_template["name"],
+        hp      = int(enemy_template["hp"]      * scale),
+        atk     = int(enemy_template["atk"]     * scale),
+        defense = int(enemy_template["defense"] * scale),
+    )
+    enemy.xp   = enemy_template["xp"]
+    enemy.gold = enemy_template["gold"]
+    max_ehp    = enemy.hp
 
-    slow_print(f"\n  A {enemy['name']} appears! ({enemy['hp']} HP | ATK {enemy['atk']})")
+    slow_print(f"\n  A {enemy.name} appears! ({enemy.hp} HP | ATK {enemy.atk} | DEF {enemy.defense})")
     pause()
 
     player.combo = 0
 
-    while enemy["hp"] > 0 and player.is_alive():
+    while enemy.hp > 0 and player.is_alive():
         clear()
-        print(f"\n  ── COMBAT ── {player.name} vs {enemy['name']} ──")
-        print(f"  You  {bar(player.hp, player.max_hp)}")
-        print(f"  Foe  {bar(enemy['hp'], max_ehp)}")
+        print(f"\n  ── COMBAT ── {player.name} vs {enemy.name} ──")
+        print(f"  {'You':<6} {bar(player.hp, player.max_hp)}  ATK {player.atk}  DEF {player.defense}")
+        print(f"  {'Foe':<6} {bar(enemy.hp, max_ehp)}  ATK {enemy.atk}  DEF {enemy.defense}")
         if player.combo > 1:
             print(f"  ⚡ Combo x{player.combo}!")
         print()
@@ -131,18 +156,18 @@ def combat(player, enemy_template, floor, scale_override=None):
             hit = roll() + player.atk > 10
             if hit:
                 player.combo += 1
-                dmg = max(1, player.atk + (player.combo - 1) - player.defense // 2)
-                enemy["hp"] -= dmg
+                dmg = max(1, player.atk + (player.combo - 1) - enemy.defense // 2)
+                enemy.hp -= dmg
                 slow_print(f"  You strike! {dmg} damage. (Combo x{player.combo})")
             else:
                 player.combo = 0
                 slow_print("  Your attack misses. Combo reset.")
 
         elif choice == "2":
-            if roll() <= 12:   # 60% hit (1-12 on d20)
+            if roll() <= 12:
                 player.combo += 1
-                dmg = max(1, player.atk * 2 + (player.combo - 1) - player.defense // 2)
-                enemy["hp"] -= dmg
+                dmg = max(1, player.atk * 2 + (player.combo - 1) - enemy.defense // 2)
+                enemy.hp -= dmg
                 slow_print(f"  Heavy blow! {dmg} damage. (Combo x{player.combo})")
             else:
                 player.combo = 0
@@ -152,27 +177,36 @@ def combat(player, enemy_template, floor, scale_override=None):
             player.combo = 0
             slow_print("  You brace for impact. Defense doubled this turn. Combo reset.")
             guard = player.defense * 2
-            dmg   = max(0, enemy["atk"] - guard)
+            dmg   = max(1, enemy.atk - guard)
             player.hp -= dmg
-            slow_print(f"  {enemy['name']} hits for {dmg} (blocked most of it).")
+            slow_print(f"  {enemy.name} hits for {dmg} (blocked most of it).")
             pause()
-            continue  # skip enemy normal attack below
+            continue
 
         elif choice == "4":
             if roll() > 10:
-                slow_print("  You flee successfully!")
+                slow_print("  You flee! But not before taking a parting blow...")
+                dmg = max(1, enemy.atk - player.defense)
+                player.hp -= dmg
+                slow_print(f"  {enemy.name} hits you for {dmg} as you run.")
                 player.combo = 0
+                pause()
                 return "fled"
             else:
-                slow_print("  Escape blocked!")
+                slow_print("  Escape blocked! The enemy seizes the opening!")
+                dmg = max(1, enemy.atk - player.defense + 3)
+                player.hp -= dmg
+                slow_print(f"  {enemy.name} punishes you for {dmg} damage.")
         else:
             slow_print("  Invalid input — you hesitate.")
 
-        # enemy attacks
-        if enemy["hp"] > 0:
-            dmg = max(0, enemy["atk"] - player.defense + random.randint(-2, 2))
-            player.hp -= dmg
-            slow_print(f"  {enemy['name']} retaliates for {dmg} damage.")
+        if enemy.hp > 0:
+            if roll() + enemy.atk > 10:
+                dmg = max(1, enemy.atk - player.defense)
+                player.hp -= dmg
+                slow_print(f"  {enemy.name} retaliates for {dmg} damage.")
+            else:
+                slow_print(f"  {enemy.name} swings and misses!")
 
         if player.hp <= 4 and player.is_alive():
             slow_print("  ⚠  You're barely standing...")
@@ -180,10 +214,15 @@ def combat(player, enemy_template, floor, scale_override=None):
         pause()
 
     if player.is_alive():
-        gold = random.randint(*enemy["gold"])
-        player.xp   += enemy["xp"]
+        gold = random.randint(*enemy.gold)
+        player.xp   += enemy.xp
         player.gold += gold
-        slow_print(f"\n  {enemy['name']} defeated! +{enemy['xp']} XP | +{gold} gold")
+        slow_print(f"\n  {enemy.name} defeated! +{enemy.xp} XP | +{gold} gold")
+        if not player.has_key:
+            drop_chance = 1.0 if room_num >= ROOMS_PER_FLOOR else CFG["game"]["key_drop_chance"]
+            if random.random() < drop_chance:
+                player.has_key = True
+                slow_print("  🗝  A floor key drops from the body. You can now descend.")
         player.try_level_up()
         return "win"
     else:
@@ -254,22 +293,21 @@ def get_enemy_for_floor(floor):
     idx     = random.randint(max(0, max_idx - 1), max_idx)
     return ENEMIES[idx]
 
-def run_room(player, room=None):
+def run_room(player, room_num):
     clear()
     flavor = random.choice(ROOM_FLAVORS)
-    slow_print(f"\n  Room {room} — {flavor}")
+    key_indicator = "  🗝  [KEY HELD]" if player.has_key else ""
+    slow_print(f"\n  Room {room_num} — {flavor}{key_indicator}")
     pause("Enter room...")
 
-    # weighted room type
     weights = CFG["room_weights"]
     event   = random.choices(list(weights.keys()), list(weights.values()))[0]
 
-    player.eat()   # food consumption each room
+    player.eat()
 
     if event == "enemy":
-        result = combat(player, get_enemy_for_floor(player.floor), player.floor)
+        result = combat(player, get_enemy_for_floor(player.floor), player.floor, room_num=room_num)
         if result == "dead":
-            # scar system: don't die, but get scarred and lose max HP
             penalty        = 5
             player.max_hp  = max(10, player.max_hp - penalty)
             player.hp      = player.max_hp // 2
@@ -278,7 +316,7 @@ def run_room(player, room=None):
             player.scars  += 1
             if player.scars > 5:
                 slow_print("  You are too broken to continue. The dungeon claims you.")
-                return False
+                return "dead"
 
     elif event == "loot":     event_loot(player)
     elif event == "rest":     event_rest(player)
@@ -287,8 +325,17 @@ def run_room(player, room=None):
     elif event == "shrine":   event_shrine(player)
 
     player.status()
+
+    if player.has_key:
+        print("\n  🗝  You hold the floor key.")
+        print("  [D] Descend to next floor   [S] Stay and explore")
+        if input("  > ").strip().lower() == "d":
+            save_game(player)
+            return "descend"
+
+    save_game(player)
     pause()
-    return True
+    return "alive"
 
 # ─────────────────────────────────────────
 #  BOSS
@@ -316,28 +363,48 @@ def title_screen():
 
 def main():
     title_screen()
-    name   = input("  Enter your name, adventurer: ").strip() or "Hero"
-    player = Player(name)
-    slow_print(f"\n  Welcome, {name}. Descend 10 floors. Survive.")
-    pause()
 
-    for floor in range(1, FLOOR_COUNT + 1):
-        player.floor = floor
-        clear()
-        slow_print(f"\n  ── Floor {floor} of {FLOOR_COUNT} ──")
+    if os.path.exists(SAVE_FILE):
+        print("  A saved game was found.")
+        print("  [C] Continue   [N] New Game")
+        choice = input("  > ").strip().lower()
+        if choice == "c":
+            player = load_game()
+            slow_print(f"\n  Welcome back, {player.name}. Floor {player.floor}.")
+            pause()
+        else:
+            delete_save()
+            name   = input("  Enter your name, adventurer: ").strip() or "Hero"
+            player = Player(name)
+            slow_print(f"\n  Welcome, {name}. Descend 10 floors. Survive.")
+            pause()
+    else:
+        name   = input("  Enter your name, adventurer: ").strip() or "Hero"
+        player = Player(name)
+        slow_print(f"\n  Welcome, {name}. Descend 10 floors. Survive.")
         pause()
 
-        for room in range(ROOMS_PER_FLOOR):
-            alive = run_room(player, room + 1)
-            if not alive:
-                slow_print("\n  GAME OVER. The dungeon is undefeated.")
-                return
-
-        # floor cleared
+    for floor in range(player.floor, FLOOR_COUNT + 1):
+        player.floor   = floor
+        player.has_key = False
         clear()
-        slow_print(f"  Floor {floor} cleared!")
-        if floor < FLOOR_COUNT:
-            slow_print("  You descend deeper...")
+        slow_print(f"\n  ── Floor {floor} of {FLOOR_COUNT} ──")
+        slow_print("  Find the floor key to descend.")
+        pause()
+
+        room_num = 0
+        while True:
+            room_num += 1
+            result = run_room(player, room_num)
+            if result == "dead":
+                slow_print("\n  GAME OVER. The dungeon is undefeated.")
+                delete_save()
+                return
+            if result == "descend":
+                break
+
+        clear()
+        slow_print(f"  Floor {floor} cleared! You descend deeper...")
         pause()
 
     # boss floor
@@ -346,6 +413,7 @@ def main():
 
     clear()
     if won:
+        delete_save()
         slow_print("\n  ══════════════════════════════")
         slow_print("   YOU ESCAPED THE DUNGEON!")
         slow_print(f"   Floors cleared: {FLOOR_COUNT}")
@@ -354,6 +422,7 @@ def main():
         slow_print(f"   Gold carried:   {player.gold}")
         slow_print("  ══════════════════════════════")
     else:
+        delete_save()
         slow_print("\n  The Dungeon Tyrant laughs as darkness falls.")
         slow_print("  GAME OVER.")
 
