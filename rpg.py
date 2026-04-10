@@ -1,39 +1,27 @@
 import random
 import os
 import time
+import json
 
 # ─────────────────────────────────────────
 #  CONFIG
 # ─────────────────────────────────────────
-FLOOR_COUNT = 10
-ROOMS_PER_FLOOR = 5
+def load_config(path="config.json"):
+    with open(path) as f:
+        cfg = json.load(f)
+    # convert gold lists to tuples so existing code works unchanged
+    for e in cfg["enemies"]:
+        e["gold"] = tuple(e["gold"])
+    cfg["boss"]["gold"] = tuple(cfg["boss"]["gold"])
+    return cfg
 
-ENEMIES = [
-    {"name": "Goblin",      "hp": 12, "atk": 3, "xp": 10, "gold": (2, 6)},
-    {"name": "Skeleton",    "hp": 18, "atk": 5, "xp": 18, "gold": (4, 10)},
-    {"name": "Orc",         "hp": 28, "atk": 7, "xp": 30, "gold": (8, 16)},
-    {"name": "Dark Knight", "hp": 45, "atk": 11,"xp": 55, "gold": (14, 25)},
-    {"name": "Dragon",      "hp": 80, "atk": 16,"xp": 100,"gold": (30, 60)},
-]
-
-ROOM_FLAVORS = [
-    "The torchlight flickers as you step inside.",
-    "A damp smell hangs in the air.",
-    "Bones crunch beneath your boots.",
-    "Shadows writhe along the walls.",
-    "An eerie silence greets you.",
-    "The ceiling drips with something dark.",
-    "A cold wind cuts through the corridor.",
-]
-
-LOOT_TABLE = [
-    {"name": "Old Sword",    "stat": "atk", "bonus": 2},
-    {"name": "Chain Mail",   "stat": "defense", "bonus": 3},
-    {"name": "Lucky Charm",  "stat": "atk",     "bonus": 1},
-    {"name": "Iron Shield",  "stat": "defense", "bonus": 2},
-    {"name": "Enchanted Blade","stat":"atk",    "bonus": 4},
-    {"name": "Dragon Scale", "stat": "defense", "bonus": 5},
-]
+CFG             = load_config()
+FLOOR_COUNT     = CFG["game"]["floor_count"]
+ROOMS_PER_FLOOR = CFG["game"]["rooms_per_floor"]
+ENEMIES         = CFG["enemies"]
+BOSS            = CFG["boss"]
+LOOT_TABLE      = CFG["loot_table"]
+ROOM_FLAVORS    = CFG["room_flavors"]
 
 # ─────────────────────────────────────────
 #  UTILITIES
@@ -62,15 +50,16 @@ def bar(current, maximum, width=20, fill="█", empty="░"):
 # ─────────────────────────────────────────
 class Player:
     def __init__(self, name):
+        p = CFG["player"]
         self.name   = name
-        self.hp     = 40
-        self.max_hp = 40
-        self.atk    = 6
-        self.defense= 2
+        self.hp     = p["hp"]
+        self.max_hp = p["hp"]
+        self.atk    = p["atk"]
+        self.defense= p["defense"]
         self.xp     = 0
         self.level  = 1
-        self.gold   = 10
-        self.food   = 8
+        self.gold   = p["gold"]
+        self.food   = p["food"]
         self.combo  = 0          # momentum system
         self.scars  = 0          # scar system: each "death" reduces max_hp
         self.floor  = 1
@@ -110,8 +99,8 @@ class Player:
 #  COMBAT
 # ─────────────────────────────────────────
 def combat(player, enemy_template, floor, scale_override=None):
-    tier_scale = 1 + ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
-    scale      = scale_override if scale_override is not None else max(0, 1 + (floor - 1) * 0.15 - tier_scale)
+    tier_scale = ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
+    scale      = scale_override if scale_override is not None else max(1, 1 + (floor - 1) * 0.15 - tier_scale)
     enemy      = {
         "name": enemy_template["name"],
         "hp":   int(enemy_template["hp"]  * scale),
@@ -222,31 +211,27 @@ def event_rest(player):
     slow_print(f"  A quiet alcove. You rest. +{heal} HP | +{food} food.")
 
 def event_merchant(player):
+    shop = CFG["shop"]
     slow_print("  A hooded merchant grins at you.")
     print(f"  Your gold: {player.gold}")
     print()
-    print("  [1] Potion   (20g) — restore 20 HP")
-    print("  [2] Rations  (10g) — +4 food")
-    print("  [3] Sharpen  (30g) — ATK +3")
-    print("  [4] Leave")
+    for i, item in enumerate(shop, 1):
+        print(f"  [{i}] {item['label']}  ({item['cost']}g) — {item['desc']}")
+    print(f"  [{len(shop)+1}] Leave")
     choice = input("  > ").strip()
-    costs = {"1": 20, "2": 10, "3": 30}
-    if choice not in costs:
+    if not choice.isdigit() or not (1 <= int(choice) <= len(shop)):
         slow_print("  You walk away.")
-    elif player.gold < costs[choice]:
-        slow_print(f"  Not enough gold. You need {costs[choice]}g.")
-    elif choice == "1":
-        player.gold -= 20
-        player.hp = min(player.max_hp, player.hp + 20)
-        slow_print("  Potion gulped. +20 HP.")
-    elif choice == "2":
-        player.gold -= 10
-        player.food += 4
-        slow_print("  Rations secured. +4 food.")
-    elif choice == "3":
-        player.gold -= 30
-        player.atk += 3
-        slow_print(f"  Blade sharpened. ATK is now {player.atk}.")
+        return
+    item = shop[int(choice) - 1]
+    if player.gold < item["cost"]:
+        slow_print(f"  Not enough gold. You need {item['cost']}g.")
+        return
+    player.gold -= item["cost"]
+    if item["stat"] == "hp":
+        player.hp = min(player.max_hp, player.hp + item["bonus"])
+    else:
+        setattr(player, item["stat"], getattr(player, item["stat"]) + item["bonus"])
+    slow_print(f"  {item['label']} acquired. {item['stat'].upper()} +{item['bonus']}. ({item['desc']})")
 
 def event_shrine(player):
     slow_print("  You find an ancient shrine.")
@@ -269,14 +254,14 @@ def get_enemy_for_floor(floor):
     idx     = random.randint(max(0, max_idx - 1), max_idx)
     return ENEMIES[idx]
 
-def run_room(player):
+def run_room(player, room=None):
     clear()
     flavor = random.choice(ROOM_FLAVORS)
-    slow_print(f"\n  Room {player.floor} — {flavor}")
+    slow_print(f"\n  Room {room} — {flavor}")
     pause("Enter room...")
 
     # weighted room type
-    weights = {"enemy":50, "loot":18, "rest":12, "trap":10, "merchant":7, "shrine":3}
+    weights = CFG["room_weights"]
     event   = random.choices(list(weights.keys()), list(weights.values()))[0]
 
     player.eat()   # food consumption each room
@@ -308,8 +293,6 @@ def run_room(player):
 # ─────────────────────────────────────────
 #  BOSS
 # ─────────────────────────────────────────
-BOSS = {"name": "The Dungeon Tyrant", "hp": 120, "atk": 18, "xp": 200, "gold": (50, 100)}
-
 def run_boss(player):
     clear()
     slow_print("\n  ══════════════════════════════")
@@ -345,7 +328,7 @@ def main():
         pause()
 
         for room in range(ROOMS_PER_FLOOR):
-            alive = run_room(player)
+            alive = run_room(player, room + 1)
             if not alive:
                 slow_print("\n  GAME OVER. The dungeon is undefeated.")
                 return

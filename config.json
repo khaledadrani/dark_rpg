@@ -1,0 +1,57 @@
+{
+  "game": {
+    "floor_count": 10,
+    "rooms_per_floor": 5
+  },
+  "player": {
+    "hp": 40,
+    "atk": 6,
+    "defense": 2,
+    "gold": 10,
+    "food": 8
+  },
+  "enemies": [
+    {"name": "Goblin",      "hp": 12, "atk": 3,  "xp": 10,  "gold": [2, 6]},
+    {"name": "Skeleton",    "hp": 18, "atk": 5,  "xp": 18,  "gold": [4, 10]},
+    {"name": "Orc",         "hp": 28, "atk": 7,  "xp": 30,  "gold": [8, 16]},
+    {"name": "Dark Knight", "hp": 45, "atk": 11, "xp": 55,  "gold": [14, 25]},
+    {"name": "Dragon",      "hp": 80, "atk": 16, "xp": 100, "gold": [30, 60]}
+  ],
+  "boss": {
+    "name": "The Dungeon Tyrant",
+    "hp": 120,
+    "atk": 18,
+    "xp": 200,
+    "gold": [50, 100]
+  },
+  "loot_table": [
+    {"name": "Old Sword",       "stat": "atk",     "bonus": 2},
+    {"name": "Chain Mail",      "stat": "defense", "bonus": 3},
+    {"name": "Lucky Charm",     "stat": "atk",     "bonus": 1},
+    {"name": "Iron Shield",     "stat": "defense", "bonus": 2},
+    {"name": "Enchanted Blade", "stat": "atk",     "bonus": 4},
+    {"name": "Dragon Scale",    "stat": "defense", "bonus": 5}
+  ],
+  "room_flavors": [
+    "The torchlight flickers as you step inside.",
+    "A damp smell hangs in the air.",
+    "Bones crunch beneath your boots.",
+    "Shadows writhe along the walls.",
+    "An eerie silence greets you.",
+    "The ceiling drips with something dark.",
+    "A cold wind cuts through the corridor."
+  ],
+  "room_weights": {
+    "enemy": 50,
+    "loot": 18,
+    "rest": 12,
+    "trap": 10,
+    "merchant": 7,
+    "shrine": 3
+  },
+  "shop": [
+    {"label": "Potion",  "cost": 20, "stat": "hp",   "bonus": 20, "desc": "restore 20 HP"},
+    {"label": "Rations", "cost": 10, "stat": "food",  "bonus": 4,  "desc": "+4 food"},
+    {"label": "Sharpen", "cost": 30, "stat": "atk",   "bonus": 3,  "desc": "ATK +3"}
+  ]
+}
