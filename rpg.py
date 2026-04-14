@@ -94,21 +94,34 @@ def timed_input(prompt, seconds):
 #  ENTITY / PLAYER
 # ─────────────────────────────────────────
 class Entity:
-    def __init__(self, name, hp, atk, defense):
-        self.name    = name
-        self.hp      = hp
-        self.max_hp  = hp
-        self.atk     = atk
-        self.defense = defense
+    def __init__(self, name, hp, atk, defense, stamina=10):
+        self.name      = name
+        self.hp        = hp
+        self.max_hp    = hp
+        self.atk       = atk
+        self.defense   = defense
+        self.stamina   = stamina
+        self.max_sta   = stamina
+        self.exhausted = False
 
     def is_alive(self):
         return self.hp > 0
+
+    def spend_sta(self, cost):
+        if self.stamina >= cost:
+            self.stamina -= cost
+        else:
+            self.stamina = 0
+        return 0
+
+    def regen_sta(self, amount):
+        self.stamina = min(self.max_sta, self.stamina + amount)
 
 
 class Player(Entity):
     def __init__(self, name):
         p = CFG["player"]
-        super().__init__(name, p["hp"], p["atk"], p["defense"])
+        super().__init__(name, p["hp"], p["atk"], p["defense"], p["stamina"])
         self.xp      = 0
         self.level   = 1
         self.gold    = p["gold"]
@@ -134,6 +147,7 @@ class Player(Entity):
     def status(self):
         print(f"\n  {self.name}  |  Level {self.level}  |  Floor {self.floor}/{FLOOR_COUNT}")
         print(f"  HP  {bar(self.hp, self.max_hp)}")
+        print(f"  STA {bar(self.stamina, self.max_sta, width=10)}")
         print(f"  XP  {bar(self.xp, self.xp_to_next())}")
         print(f"  ATK {self.atk}  DEF {self.defense}  GOLD {self.gold}  FOOD {self.food}")
         if self.scars:
@@ -155,14 +169,28 @@ def enemy_pick_action(ai_weights):
     return random.choices(actions, weights)[0]
 
 def resolve_combat(player, enemy, p_action, e_action):
-    """Resolve one turn. Returns False if combat should end early (flee)."""
-    p_def = player.defense * 2 if p_action == "defend" else player.defense
-    e_def = enemy.defense  * 2 if e_action == "defend" else enemy.defense
+    SC = CFG["stamina"]
+
+    # ── exhaustion restore at start of turn ──
+    if player.exhausted:
+        player.stamina   = int(player.max_sta * SC["exhaustion_restore"])
+        player.exhausted = False
+        slow_print(f"  You catch your breath. STA restored to {player.stamina}.")
+    if enemy.exhausted:
+        enemy.stamina   = int(enemy.max_sta * SC["exhaustion_restore"])
+        enemy.exhausted = False
 
     slow_print(f"  {enemy.name} prepares to {e_action.upper()}!")
 
-    # ── player attacks enemy ──
+    p_def = player.defense * 2 if p_action == "defend" else player.defense
+    e_def = enemy.defense  * 2 if e_action == "defend" else enemy.defense
+
+    # ── player action ──
     if p_action in ("attack", "heavy"):
+        cost = SC["cost_heavy"] if p_action == "heavy" else SC["cost_attack"]
+        player.spend_sta(cost)
+        if player.stamina == 0:
+            player.exhausted = True
         hit_threshold = 12 if p_action == "heavy" else 10
         if roll() + player.atk > hit_threshold:
             player.combo += 1
@@ -174,23 +202,46 @@ def resolve_combat(player, enemy, p_action, e_action):
         else:
             player.combo = 0
             slow_print("  Your attack misses. Combo reset.")
-    elif p_action == "defend":
+    elif p_action in ("defend", "weak_block"):
         player.combo = 0
-        slow_print("  You brace for impact.")
+        if p_action == "weak_block":
+            slow_print("  Exhausted, you weakly raise your guard.")
+        else:
+            slow_print("  You brace for impact.")
 
-    # ── enemy attacks player ──
+    # ── enemy action ──
+    # if enemy exhausted this turn, force weak_block
+    if enemy.exhausted and e_action != "weak_block":
+        e_action = "weak_block"
+        p_def    = player.defense  # weak block uses base def
+
+    enemy_hit = False
     if e_action in ("attack", "heavy"):
+        cost = SC["cost_heavy"] if e_action == "heavy" else SC["cost_attack"]
+        enemy.spend_sta(cost)
+        if enemy.stamina == 0:
+            enemy.exhausted = True
         hit_threshold = 12 if e_action == "heavy" else 10
         if roll() + enemy.atk > hit_threshold:
+            enemy_hit = True
             atk_mult = 2 if e_action == "heavy" else 1
             dmg = max(1, enemy.atk * atk_mult - p_def)
             player.hp -= dmg
             label = f"{enemy.name} strikes heavily" if e_action == "heavy" else f"{enemy.name} attacks"
             slow_print(f"  {label} for {dmg} damage!")
+            if p_action == "defend":
+                player.spend_sta(SC["cost_defend_block"])
+                if player.stamina == 0:
+                    player.exhausted = True
         else:
             slow_print(f"  {enemy.name} misses!")
-    elif e_action == "defend":
+    elif e_action in ("defend", "weak_block"):
         slow_print(f"  {enemy.name} braces for impact.")
+
+    # ── defend idle regen: enemy missed or didn't attack ──
+    if p_action == "defend" and not enemy_hit:
+        player.regen_sta(SC["regen_defend_idle"])
+        slow_print("  You held your ground. Stamina recovers.")
 
 def combat(player, enemy_template, floor, scale_override=None, room_num=0):
     tier_scale  = ENEMIES.index(enemy_template) * 0.1 if enemy_template in ENEMIES else 0
@@ -201,6 +252,7 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
         hp      = int(enemy_template["hp"]      * scale),
         atk     = int(enemy_template["atk"]     * scale),
         defense = int(enemy_template["defense"] * scale),
+        stamina = CFG["stamina"]["max"],
     )
     enemy.xp   = enemy_template["xp"]
     enemy.gold = enemy_template["gold"]
@@ -209,13 +261,16 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
     slow_print(f"\n  A {enemy.name} appears! ({enemy.hp} HP | ATK {enemy.atk} | DEF {enemy.defense})")
     pause()
 
-    player.combo = 0
+    player.combo   = 0
+    player.stamina = player.max_sta
 
     while enemy.hp > 0 and player.is_alive():
         clear()
         print(f"\n  ── COMBAT ── {player.name} vs {enemy.name} ──")
         print(f"  {'You':<6} {bar(player.hp, player.max_hp)}  ATK {player.atk}  DEF {player.defense}")
+        print(f"  {'':6} {bar(player.stamina, player.max_sta, width=10, fill='▒', empty='░')}  STA")
         print(f"  {'Foe':<6} {bar(enemy.hp, max_ehp)}  ATK {enemy.atk}  DEF {enemy.defense}")
+        print(f"  {'':6} {bar(enemy.stamina, enemy.max_sta, width=10, fill='▒', empty='░')}  STA")
         if player.combo > 1:
             print(f"  ⚡ Combo x{player.combo}!")
         print()
@@ -226,6 +281,16 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
             choice = timed_input("  > ", timer_cfg["seconds"])
         else:
             choice = input("  > ").strip()
+
+        if player.exhausted:
+            slow_print("  ⚠  You are exhausted! You can only weakly block this turn.")
+            p_action = "weak_block"
+            e_action = enemy_pick_action(ai_weights)
+            resolve_combat(player, enemy, p_action, e_action)
+            if player.hp <= 4 and player.is_alive():
+                slow_print("  ⚠  You're barely standing...")
+            pause()
+            continue
 
         if choice not in ("1", "2", "3", "4"):
             slow_print("  Invalid input — you hesitate.")
@@ -257,9 +322,10 @@ def combat(player, enemy_template, floor, scale_override=None, room_num=0):
                 return "fled"
             else:
                 slow_print("  Escape blocked! The enemy seizes the opening!")
+                player.spend_sta(CFG["stamina"]["cost_flee_fail"])
                 dmg = max(1, enemy.atk - player.defense + 3)
                 player.hp -= dmg
-                slow_print(f"  {enemy.name} punishes you for {dmg} damage.")
+                slow_print(f"  {enemy.name} punishes you for {dmg} damage. (-{CFG['stamina']['cost_flee_fail']} STA)")
                 pause()
                 continue
 
