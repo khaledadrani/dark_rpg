@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dark-rpg"
+version = "1.0.0"
+description = "A terminal dungeon-crawl text RPG: two swappable combat systems, rarity-based gear, status effects, special-ability enemies, and plugin-based room events. Pure Python, stdlib only."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = [
+    "rpg",
+    "terminal",
+    "text-adventure",
+    "dungeon-crawler",
+    "ascii-art",
+    "turn-based-combat",
+    "game",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment",
+]
+
+[project.scripts]
+dark-rpg = "dark_rpg.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dark-rpg/dark-rpg"
+Repository = "https://github.com/dark-rpg/dark-rpg"
+Issues = "https://github.com/dark-rpg/dark-rpg/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Ship the default tuning file with the package so an installed `dark-rpg`
+# works from any directory without a config.json next to the entry point.
+[tool.setuptools.package-data]
+dark_rpg = ["config.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

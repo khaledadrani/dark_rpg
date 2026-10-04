@@ -214,3 +214,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dark RPG runtime artifacts
+save.json
+save.json.tmp
+.pytest_cache/

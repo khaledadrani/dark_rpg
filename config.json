@@ -2,39 +2,215 @@
   "game": {
     "floor_count": 10,
     "rooms_per_floor": 5,
-    "key_drop_chance": 0.3,
-    "turn_timer": {"enabled": true, "seconds": 60}
+    "key_drop_chance": 0.35,
+    "turn_timer": {
+      "enabled": true,
+      "seconds": 60
+    },
+    "combat_mode": "stamina",
+    "xp_per_level": 28,
+    "scar_penalty": 3,
+    "scar_limit": 6,
+    "floor_scale": 0.09,
+    "tier_scale": 0.05,
+    "hunger_damage": 1,
+    "level_hp": 12,
+    "level_atk": 4
+  },
+  "ui": {
+    "slow_print_delay": 0.03,
+    "ascii_art": true,
+    "art_frame_delay": 0.15,
+    "ansi_color": true,
+    "ansi_color": true
   },
   "player": {
-    "hp": 25,
-    "atk": 3,
-    "defense": 1,
-    "gold": 5,
-    "food": 10
+    "hp": 32,
+    "atk": 5,
+    "defense": 2,
+    "gold": 12,
+    "food": 25,
+    "stamina": 12
+  },
+  "stamina": {
+    "max": 16,
+    "cost_attack": 2,
+    "cost_heavy": 4,
+    "cost_defend_block": 2,
+    "cost_flee_fail": 4,
+    "regen_defend_idle": 4,
+    "exhaustion_restore": 0.75
+  },
+  "posture": {
+    "max": 24,
+    "cost_attack": 2,
+    "cost_heavy": 4,
+    "cost_deflect": 2,
+    "cost_deflect_fail": 7,
+    "cost_dodge": 3,
+    "cost_dodge_fail": 5,
+    "hit_drain": 3,
+    "heavy_drain": 5,
+    "broken_dmg_mult": 1.5,
+    "broken_restore": 0.5,
+    "defend_regen": 4,
+    "flee_fail_cost": 4
   },
   "enemies": [
-    {"name": "Goblin",      "hp": 12, "atk": 3,  "defense": 1, "xp": 10,  "gold": [2, 6],   "ai": {"attack": 60, "heavy": 30, "defend": 10}},
-    {"name": "Skeleton",    "hp": 18, "atk": 5,  "defense": 1, "xp": 18,  "gold": [4, 10],  "ai": {"attack": 50, "heavy": 20, "defend": 30}},
-    {"name": "Orc",         "hp": 28, "atk": 7,  "defense": 2, "xp": 30,  "gold": [8, 16],  "ai": {"attack": 45, "heavy": 40, "defend": 15}},
-    {"name": "Dark Knight", "hp": 45, "atk": 11, "defense": 5, "xp": 55,  "gold": [14, 25], "ai": {"attack": 35, "heavy": 30, "defend": 35}},
-    {"name": "Dragon",      "hp": 80, "atk": 16, "defense": 8, "xp": 100, "gold": [30, 60], "ai": {"attack": 40, "heavy": 50, "defend": 10}}
+    {
+      "name": "Giant Rat",
+      "hp": 8,
+      "atk": 3,
+      "defense": 0,
+      "xp": 6,
+      "gold": [1, 4],
+      "ai": { "attack": 70, "defend": 30 }
+    },
+    {
+      "name": "Goblin",
+      "hp": 10,
+      "atk": 4,
+      "defense": 1,
+      "xp": 10,
+      "gold": [2, 6],
+      "ai": { "attack": 65, "heavy": 15, "defend": 20 }
+    },
+    {
+      "name": "Cave Spider",
+      "hp": 12,
+      "atk": 4,
+      "defense": 1,
+      "xp": 14,
+      "gold": [3, 8],
+      "status_on_hit": { "poison": 2 },
+      "ai": { "attack": 60, "defend": 40 }
+    },
+    {
+      "name": "Skeleton",
+      "hp": 14,
+      "atk": 5,
+      "defense": 1,
+      "xp": 18,
+      "gold": [4, 10],
+      "ai": { "attack": 55, "heavy": 15, "defend": 30 }
+    },
+    {
+      "name": "Cultist",
+      "hp": 14,
+      "atk": 5,
+      "defense": 1,
+      "xp": 20,
+      "gold": [5, 12],
+      "ai": { "attack": 60, "defend": 30, "heavy": 10 }
+    },
+    {
+      "name": "Orc",
+      "hp": 20,
+      "atk": 7,
+      "defense": 2,
+      "xp": 30,
+      "gold": [8, 16],
+      "ai": { "attack": 55, "heavy": 25, "defend": 20 }
+    },
+    {
+      "name": "Assassin",
+      "hp": 16,
+      "atk": 8,
+      "defense": 1,
+      "xp": 30,
+      "gold": [9, 16],
+      "ability": { "type": "crit", "chance": 0.15, "mult": 1.8 },
+      "ai": { "attack": 50, "heavy": 30, "defend": 20 }
+    },
+    {
+      "name": "Wraith",
+      "hp": 22,
+      "atk": 8,
+      "defense": 3,
+      "xp": 40,
+      "gold": [10, 20],
+      "ability": { "type": "drain", "amount": 3 },
+      "ai": { "attack": 55, "defend": 25, "heavy": 20 }
+    },
+    {
+      "name": "Dark Knight",
+      "hp": 34,
+      "atk": 12,
+      "defense": 5,
+      "xp": 55,
+      "gold": [14, 25],
+      "ai": { "attack": 45, "heavy": 25, "defend": 30 }
+    },
+    {
+      "name": "Vampire",
+      "hp": 28,
+      "atk": 11,
+      "defense": 4,
+      "xp": 65,
+      "gold": [16, 30],
+      "ability": { "type": "lifesteal", "chance": 0.5, "fraction": 0.5 },
+      "ai": { "attack": 55, "defend": 20, "heavy": 25 }
+    },
+    {
+      "name": "Lich",
+      "hp": 30,
+      "atk": 12,
+      "defense": 4,
+      "xp": 75,
+      "gold": [20, 35],
+      "ability": { "type": "revive", "once": true, "fraction": 0.4 },
+      "ai": { "attack": 45, "defend": 35, "heavy": 20 }
+    },
+    {
+      "name": "Dragon",
+      "hp": 55,
+      "atk": 16,
+      "defense": 8,
+      "xp": 100,
+      "gold": [30, 60],
+      "ai": { "attack": 45, "heavy": 35, "defend": 20 }
+    }
   ],
   "boss": {
     "name": "The Dungeon Tyrant",
-    "hp": 120,
-    "atk": 18,
-    "defense": 10,
+    "hp": 130,
+    "atk": 17,
+    "defense": 8,
     "xp": 200,
     "gold": [50, 100],
-    "ai": {"attack": 30, "heavy": 40, "defend": 30}
+    "ai": { "attack": 40, "heavy": 30, "defend": 30 }
+  },
+  "status_effects": [
+    { "name": "poison", "kind": "poison", "power": 2, "duration": 3 },
+    { "name": "burn", "kind": "burn", "power": 3, "duration": 2 },
+    { "name": "regen", "kind": "regen", "power": 3, "duration": 3 }
+  ],
+  "gear_slots": { "weapon": "atk", "armor": "defense", "trinket": "atk" },
+  "rarity": {
+    "common": { "mult": 1.0, "weight": 60 },
+    "uncommon": { "mult": 1.4, "weight": 27 },
+    "rare": { "mult": 1.9, "weight": 10 },
+    "epic": { "mult": 2.5, "weight": 3 }
   },
   "loot_table": [
-    {"name": "Old Sword",       "stat": "atk",     "bonus": 2},
-    {"name": "Chain Mail",      "stat": "defense", "bonus": 3},
-    {"name": "Lucky Charm",     "stat": "atk",     "bonus": 1},
-    {"name": "Iron Shield",     "stat": "defense", "bonus": 2},
-    {"name": "Enchanted Blade", "stat": "atk",     "bonus": 4},
-    {"name": "Dragon Scale",    "stat": "defense", "bonus": 5}
+    { "name": "Rusty Dagger", "slot": "weapon", "stat": "atk", "bonus": 2, "rarity": "common" },
+    { "name": "Iron Shortsword", "slot": "weapon", "stat": "atk", "bonus": 3, "rarity": "common" },
+    { "name": "Steel Longsword", "slot": "weapon", "stat": "atk", "bonus": 4, "rarity": "uncommon" },
+    { "name": "Runed Warblade", "slot": "weapon", "stat": "atk", "bonus": 5, "rarity": "rare" },
+    { "name": "Dragonbone Cleaver", "slot": "weapon", "stat": "atk", "bonus": 6, "rarity": "epic" },
+    { "name": "Cloth Vest", "slot": "armor", "stat": "defense", "bonus": 1, "rarity": "common" },
+    { "name": "Leather Jerkin", "slot": "armor", "stat": "defense", "bonus": 2, "rarity": "common" },
+    { "name": "Chain Mail", "slot": "armor", "stat": "defense", "bonus": 3, "rarity": "uncommon" },
+    { "name": "Plate Armor", "slot": "armor", "stat": "defense", "bonus": 4, "rarity": "rare" },
+    { "name": "Dragon Scale", "slot": "armor", "stat": "defense", "bonus": 6, "rarity": "epic" },
+    { "name": "Copper Ring", "slot": "trinket", "stat": "atk", "bonus": 1, "rarity": "common" },
+    { "name": "Silver Amulet", "slot": "trinket", "stat": "atk", "bonus": 2, "rarity": "uncommon" },
+    { "name": "Ruby Pendant", "slot": "trinket", "stat": "atk", "bonus": 3, "rarity": "rare" },
+    { "name": "Ward of Thorns", "slot": "trinket", "stat": "defense", "bonus": 2, "rarity": "uncommon" },
+    { "name": "Fire Flask", "slot": null, "stat": "burn", "bonus": 1, "rarity": "uncommon" },
+    { "name": "Poison Vial", "slot": null, "stat": "poison", "bonus": 1, "rarity": "uncommon" },
+    { "name": "Bloodstone", "slot": null, "stat": "atk", "bonus": 2, "rarity": "rare" },
+    { "name": "Phoenix Feather", "slot": null, "stat": "defense", "bonus": 3, "rarity": "epic" }
   ],
   "room_flavors": [
     "The torchlight flickers as you step inside.",
@@ -43,19 +219,45 @@
     "Shadows writhe along the walls.",
     "An eerie silence greets you.",
     "The ceiling drips with something dark.",
-    "A cold wind cuts through the corridor."
+    "A cold wind cuts through the corridor.",
+    "Scratches gouge the floor, all leading deeper.",
+    "The stone is slick and black with age.",
+    "Somewhere below, something is breathing.",
+    "Old claw marks score every wall.",
+    "The air tastes of rust and old blood.",
+    "Your footsteps echo into a long dark throat.",
+    "A cold draft rises from a crack in the floor.",
+    "Faded runes glow faintly on the far wall.",
+    "The dark here feels *hungry*.",
+    "Dust motes hang frozen in the torchlight.",
+    "The walls press close, watching.",
+    "A thin stream of water hisses over hot stone.",
+    "The smell of ash clings to your coat.",
+    "Something skitters in the gloom behind you.",
+    "The far door is ajar, swollen with rot.",
+    "Chains hang rusted from the ceiling.",
+    "The floor is a mosaic of crushed coins.",
+    "A low growl rolls up from the pit below."
   ],
   "room_weights": {
-    "enemy": 50,
-    "loot": 18,
-    "rest": 12,
-    "trap": 10,
-    "merchant": 7,
-    "shrine": 3
+    "enemy": 44,
+    "loot": 14,
+    "rest": 10,
+    "trap": 8,
+    "merchant": 8,
+    "shrine": 5,
+    "vault": 5,
+    "curse": 4,
+    "ambush": 5,
+    "gamble": 4,
+    "secret": 3
   },
   "shop": [
-    {"label": "Potion",  "cost": 10, "stat": "hp",   "bonus": 20, "desc": "restore 20 HP"},
-    {"label": "Rations", "cost": 5,  "stat": "food",  "bonus": 4,  "desc": "+4 food"},
-    {"label": "Sharpen", "cost": 20, "stat": "atk",   "bonus": 3,  "desc": "ATK +3"}
+    { "label": "Health Potion", "cost": 10, "kind": "consume", "item": "potion", "desc": "restores 20 HP (carry up to 3)" },
+    { "label": "Rations", "cost": 5, "kind": "consume", "item": "rations", "desc": "+4 food (carry up to 6)" },
+    { "label": "Oil Flask", "cost": 12, "kind": "consume", "item": "oil", "desc": "ignites a foe in combat (carry up to 2)" },
+    { "label": "Poison Vial", "cost": 15, "kind": "consume", "item": "poison_vial", "desc": "poisons a foe in combat (carry up to 2)" },
+    { "label": "Sharpen Stone", "cost": 20, "kind": "stat", "stat": "atk", "bonus": 3, "desc": "ATK +3 (flat, permanent)" },
+    { "label": "Bracer", "cost": 20, "kind": "stat", "stat": "defense", "bonus": 2, "desc": "DEF +2 (flat, permanent)" }
   ]
 }
