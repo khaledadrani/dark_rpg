@@ -8,7 +8,6 @@ on a combat win at room >= ``rooms_per_floor``.
 """
 from __future__ import annotations
 
-import pytest
 
 from dark_rpg.testing import StubRng, make_game
 from dark_rpg.world.enemies import make_combatant

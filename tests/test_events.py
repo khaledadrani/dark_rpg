@@ -1,9 +1,8 @@
 """Room event plugin tests (loot, rest, trap, merchant, shrine)."""
 from __future__ import annotations
 
-import pytest
 
-from dark_rpg.testing import FakeIO, StubRng, make_game
+from dark_rpg.testing import StubRng, make_game
 
 
 def run_event(game_cfg, event_id, player, answers=None, defaults=None):

@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 
 from dark_rpg.combat.base import CombatMode
 from dark_rpg.entities import Entity
-from dark_rpg.status import apply_status
 
 
 def pick_enemy_for_floor(cfg: Dict[str, Any], floor: int, rng: random.Random) -> Dict[str, Any]:

@@ -5,11 +5,10 @@ as the game evolves.
 """
 from __future__ import annotations
 
-import pytest
 
 from dark_rpg.entities import Player, crit_amplify
 from dark_rpg.status import StatusEffect, apply_status, tick_statuses
-from dark_rpg.testing import FakeIO, StubRng, make_game
+from dark_rpg.testing import StubRng, make_game
 
 
 # ── gear system ──────────────────────────────────────────────────────────
@@ -44,7 +43,7 @@ def test_poison_ticks_each_turn(game_cfg):
     e = Player("Hero", game_cfg)
     e.statuses = [StatusEffect("poison", 2, 3)]
     hp = e.hp
-    msgs = tick_statuses(e, game_cfg, StubRng())
+    tick_statuses(e, game_cfg, StubRng())
     # poison deals its power each tick
     assert e.hp < hp
     assert len(e.statuses) == 1 and e.statuses[0].duration == 1
@@ -132,7 +131,7 @@ def test_use_potion_heals_in_combat(game_cfg):
     enemy = Entity("Foe", 20, 3, 1)
     enemy.set_stamina_pool(game_cfg["stamina"]["max"])
     player.set_stamina_pool(game_cfg["stamina"]["max"])
-    msgs = mode.resolve(player, enemy, "use", "defend", StubRng(roll=20))
+    mode.resolve(player, enemy, "use", "defend", StubRng(roll=20))
     assert player.hp == 5 + 20  # potion heals 20 (capped at max 32)
     assert player.consumables["potion"] == 0
 

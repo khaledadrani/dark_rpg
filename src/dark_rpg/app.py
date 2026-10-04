@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import random
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, Optional
 
 from dark_rpg.art import enemy_art, play_art, scenery_art
@@ -11,7 +11,7 @@ from dark_rpg.combat import get_combat_mode
 from dark_rpg.config import load_config  # noqa: F401  (re-exported convenience)
 from dark_rpg.entities import Player
 from dark_rpg.io import GameIO, Prompt
-from dark_rpg.save import SaveError, delete_save, load_game, save_game
+from dark_rpg.save import SaveError, delete_save, load_game
 from dark_rpg.ui import article
 from dark_rpg.world.enemies import make_combatant
 from dark_rpg.world.rooms import run_room
@@ -228,8 +228,8 @@ class Game:
         return player
 
     def _load_or_new_player(self) -> Player:
-        save_exists = bool(self.save_path) and os.path.exists(self.save_path)
-        if not save_exists:
+        save_path = self.save_path
+        if not save_path or not os.path.exists(save_path):
             return self._new_player()
 
         self.io.out("  A saved game was found.")
@@ -237,7 +237,7 @@ class Game:
         choice = self.io.ask(Prompt("menu", "  > ", {})).strip().lower()
         if choice == "c":
             try:
-                player = load_game(self.save_path, self.cfg)
+                player = load_game(save_path, self.cfg)
                 self.io.slow_out(f"\n  Welcome back, {player.name}. Floor {player.floor}.")
                 self.io.pause()
                 return player
@@ -309,6 +309,7 @@ class Game:
     def _recap(self, outcome: str) -> None:
         """Print a run-summary recap (deaths, fights, rooms, gold, level)."""
         p = self.player
+        assert p is not None, "recap requires a started run"
         self.io.slow_out("")
         self.io.slow_out("  ── RUN RECAP ─────────────────────")
         self.io.slow_out(f"   Outcome:      {'VICTORY' if outcome == 'win' else 'DEFEAT'}")
@@ -321,6 +322,7 @@ class Game:
 
     def _result(self, outcome: str, floor_count: int) -> GameResult:
         player = self.player
+        assert player is not None, "result requires a started run"
         floors_cleared = floor_count if outcome == "win" else max(0, player.floor - 1)
         return GameResult(
             outcome=outcome,

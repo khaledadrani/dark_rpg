@@ -1,7 +1,6 @@
 """Pure display helpers (no IO side effects)."""
 from __future__ import annotations
 
-from typing import Optional
 
 #: ANSI colour codes for visual emphasis (HP/STA/PST bars, crits, level-ups).
 #: Applied only when the output is interactive and ``ui.ansi_color`` is on.

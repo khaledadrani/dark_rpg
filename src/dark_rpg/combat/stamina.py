@@ -13,11 +13,11 @@ Design rules (see ``docs/COMBAT.md`` for the full rationale):
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 from dark_rpg.combat import register_combat_mode
 from dark_rpg.combat.base import CombatMode
-from dark_rpg.entities import Entity, apply_post_hit, crit_amplify
+from dark_rpg.entities import Entity, Player, apply_post_hit, crit_amplify
 from dark_rpg.status import tick_statuses
 from dark_rpg.ui import bar
 
@@ -81,6 +81,7 @@ class StaminaCombatMode(CombatMode):
         rng: random.Random,
     ) -> List[str]:
         SC = self.cfg["stamina"]
+        player = cast(Player, player)  # combo is player-only state
         msgs: List[str] = []
 
         # ── status effects tick at the start of the turn (DoT damage) ────

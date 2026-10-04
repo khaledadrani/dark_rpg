@@ -8,11 +8,10 @@ playable under both combat modes?
 """
 from __future__ import annotations
 
-import random
 
 import pytest
 
-from dark_rpg.app import Game, GameResult
+from dark_rpg.app import GameResult
 from dark_rpg.testing import attack_policy, make_game, run_simulation
 
 

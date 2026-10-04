@@ -22,9 +22,12 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 from dark_rpg.entities import Entity
+
+if TYPE_CHECKING:
+    from dark_rpg.entities import Player
 
 
 class CombatModeError(Exception):
@@ -114,6 +117,7 @@ class CombatMode(ABC):
         to the enemy.  Returns the messages to display.
         """
         from dark_rpg.status import apply_status
+        player = cast("Player", player)  # only the player carries consumables/food
         msgs: List[str] = []
         # 1) drink a potion if damaged
         if player.use_consumable("potion") and player.hp < player.max_hp:

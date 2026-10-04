@@ -20,7 +20,7 @@ whether it is an upgrade or a downgrade.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 #: slot -> the base player stat it scales
 DEFAULT_GEAR_SLOTS: Dict[str, str] = {

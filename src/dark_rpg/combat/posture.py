@@ -21,7 +21,7 @@ Design rules (see ``docs/COMBAT.md``):
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dark_rpg.combat import register_combat_mode
 from dark_rpg.combat.base import CombatMode
@@ -112,7 +112,7 @@ class PostureCombatMode(CombatMode):
         player: Entity,
         enemy: Entity,
         p_action: str,
-        e_action: str,
+        e_action: Optional[str],  # set to None mid-turn once the enemy has already acted
         rng: random.Random,
     ) -> List[str]:
         SC = self.cfg["posture"]

@@ -36,7 +36,7 @@ _LOOT_KEYS = {"name", "stat", "bonus"}
 _SHOP_KEYS = {"label", "cost", "stat", "bonus", "desc"}
 
 
-def _require(section: str, key: str, errors: list[str]) -> None:
+def _require(section: Dict[str, Any], key: str, errors: list[str]) -> None:
     if key not in section:
         errors.append(f"missing key {key!r}")
 

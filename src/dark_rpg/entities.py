@@ -12,9 +12,9 @@ depending on the active combat mode), and two state flags:
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from dark_rpg.status import apply_status
+from dark_rpg.status import StatusEffect, apply_status
 from dark_rpg.ui import bar
 
 
@@ -93,6 +93,11 @@ class Entity:
         self.statuses: List[Any] = []
         # raw config template driving special abilities (default: none)
         self.template: Dict[str, Any] = {}
+        # enemy rewards (Player overrides with its own progression state)
+        self.xp = 0
+        self.gold: Any = 0
+        # one-shot guard for the "revive" ability
+        self._revived = False
 
     def __repr__(self) -> str:
         return (f"{type(self).__name__}({self.name!r}, hp={self.hp}/{self.max_hp}, "
@@ -311,7 +316,7 @@ class Player(Entity):
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], cfg: Dict[str, Any]) -> "Player":
+    def from_dict(cls, data: Dict[str, Any], cfg: Dict[str, Any]) -> "Player":  # type: ignore[override]
         """Rebuild a player from a save dict; validates required keys."""
         missing = cls.SAVE_KEYS - set(data)
         if missing:

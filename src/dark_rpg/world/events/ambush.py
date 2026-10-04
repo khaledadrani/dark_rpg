@@ -18,7 +18,7 @@ class AmbushEvent(RoomEvent):
 
     def run(self, game: Any, player: Any, room_num: int) -> None:
         template = pick_enemy_for_floor(game.cfg, player.floor, game.rng)
-        io, rng = game.io, game.rng
+        io = game.io
         io.slow_out(f"  ⚠  Ambush! A {template['name']} springs from the shadows!")
         # The ambusher lands one free strike before the duel begins.
         base_dmg = max(1, int(template["atk"] * 0.6) - player.defense)

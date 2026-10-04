@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from dark_rpg.gear import describe
 from dark_rpg.world.events import register_event
 from dark_rpg.world.events.base import RoomEvent
 
