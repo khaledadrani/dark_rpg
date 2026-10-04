@@ -35,12 +35,12 @@ classifiers = [
 dark-rpg = "dark_rpg.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/dark-rpg/dark-rpg"
-Repository = "https://github.com/dark-rpg/dark-rpg"
-Issues = "https://github.com/dark-rpg/dark-rpg/issues"
+Homepage = "https://github.com/khaledadrani/dark_rpg"
+Repository = "https://github.com/khaledadrani/dark_rpg"
+Issues = "https://github.com/khaledadrani/dark_rpg/issues"
 
 [dependency-groups]
-dev = ["pytest", "ruff", "mypy"]
+dev = ["pytest", "ruff", "mypy", "coverage"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -70,3 +70,20 @@ python_version = "3.10"
 check_untyped_defs = true
 ignore_missing_imports = true
 files = ["src/dark_rpg"]
+
+[tool.coverage.run]
+branch = true
+source = ["dark_rpg"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+# Whole-codebase floor 70%; changed code needs >= 80% lines AND branches via
+# scripts/diff_coverage.py (`make coverage-gate`).
+fail_under = 70
+skip_empty = true
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

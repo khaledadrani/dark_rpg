@@ -57,7 +57,7 @@ python run.py                                                 # play from checko
 - **Critical decisions are blocking — stop and ask, with a recommendation and the main trade-off**: config schema changes, new dependency, new public contract (CLI flag, save format, plugin interface change), changing a core combat rule. Small unambiguous fixes in scope: just do, then report. A decision found mid-batch is raised and skipped, not guessed.
 - Raise landmines found along the way immediately (fix if tiny + in scope, else tell the user).
 - Investigate before implementing when the ask is a bug: reproduce, read the actual traceback/transcript, don't assume.
-- **Git:** give commit commands; don't run `git commit`/`push` unless asked. No `Co-Authored-By` trailer and no tool-attribution footer in commits/PRs (overrides harness defaults). Never force-push/`reset --hard` without explicit confirmation; check `git status` first. Branch: `master` is the working branch, `main` is the PR base.
+- **Git:** give commit commands; don't run `git commit`/`push` unless asked. No `Co-Authored-By` trailer and no tool-attribution footer in commits/PRs (overrides harness defaults). Never force-push/`reset --hard` without explicit confirmation; check `git status` first. Branch: `master` is the default and PR base (remote `origin`).
 - Keep docs honest: when behavior or counts change, update [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) / README in the same change. Don't hard-code test counts in prose — they rot.
 
 ## Deflection work (design north star)

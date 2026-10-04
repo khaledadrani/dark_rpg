@@ -219,3 +219,4 @@ __marimo__/
 save.json
 save.json.tmp
 .pytest_cache/
+coverage.json

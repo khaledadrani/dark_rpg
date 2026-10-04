@@ -29,13 +29,22 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # diff coverage gate needs the base branch history
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install test deps
-        run: pip install pytest build
-      - name: Run tests
-        run: python -m pytest -q
+        run: pip install pytest build coverage
+      - name: Run tests (line + branch coverage)
+        run: coverage run -m pytest -q
+      - name: Whole-codebase coverage floor (70%)
+        run: coverage report --skip-covered
+      - name: Diff coverage gate (changed code >= 80% lines and branches)
+        if: ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' }}
+        run: |
+          coverage json -q -o coverage.json
+          python scripts/diff_coverage.py --base origin/${{ github.base_ref }} --min-lines 80 --min-branches 80
       - name: Balance simulation smoke check (both modes)
         run: python scripts/simulate.py --runs 50 --policy smart --all-modes
       - name: Build wheel (verifies packaging + config.json is shipped)
